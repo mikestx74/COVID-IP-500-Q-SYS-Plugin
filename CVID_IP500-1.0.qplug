@@ -1,0 +1,2407 @@
+---------------------------------------------------(Version)---------------------------------------------------
+PluginInfo = {
+  Name = "COVID-AV~IP-500",
+  Version = "1.00.01",
+  BuildVersion = "1.00.01",
+  Id = "7bb48bae-9719-4726-afd6-17dd497672eb",
+  Description = [[IP-500 Plug-In]], --[["Text"]] --is used for defining multi-line strings or raw strings
+  Author = "EMSSW - Mike Slattery",
+  --Manufacturer = "COVID AV",
+  Model = "CB1-500",
+  ShowDebug = true
+}
+
+---------------------------------------------------Global Variable--------------------------------------------
+COLORS = {
+    ["OK"] = "#0e8b0e",
+    [0] = "#00FF00",
+    ["COMPROMISED"] = "orange",
+    [1] = "orange",
+    ["FAULT"] = "red",
+    [2] = "red",
+    ["NOT_PRESENT"] = "gray",
+    [3] = "gray",
+    ["MISSING"] = "darkred", 
+    [4] = "darkred",
+    ["INITIALIZING"] = "blue",
+    [5] = "blue",
+    ["GREEN"] = "#00ff00",
+    ["RED"] = "#ff0000",
+    ["ORANGE"] = "#ffa500",
+    ["GRAY"] = "#7c7c7c",
+    ["DARK_GREEN"] = "#007C00"
+}
+
+STATUS_VALUES = {
+    ["OK"] = 0,
+    ["COMPROMISED"] = 1,
+    ["FAULT"] = 2,
+    ["NOT_PRESENT"] = 3,
+    ["MISSING"] = 4,
+    ["INITIALIZING"] = 5
+}
+
+NET = { 
+  TcpClient = nil, 
+  Connected = false
+}
+
+
+Preset_Table = {}
+VidWallDecoders_Table = {}
+
+--------------------------------------------------------------------------
+--Encoder Config table
+--------------------------------------------------------------------------
+Encoder_Id_Table = {}  
+Encoder_Sw_Id_Table = {}
+
+CEC_OFF             = 1
+CEC_ON              = 2
+CEC_ON_OT           = 3
+CEC_MENU_ROOT       = 4
+CEC_MENU_SETUP      = 5
+CEC_MENU_CONTENT    = 6
+CEC_MENU_FAV        = 7
+CEC_MENU_TOP        = 8
+CEC_UP              = 9
+CEC_DN              = 10
+CEC_LEFT            = 11
+CEC_RIGHT           = 12
+CEC_SELECT          = 16
+CEC_ENTER           = 16
+CEC_EXIT            = 15
+CEC_PAGE_UP         = 18
+CEC_PAGE_DN         = 17
+CEC_STOP            = 18
+CEC_PLAY            = 19
+CEC_PAUSE           = 20
+CEC_REV             = 21
+CEC_FWD             = 22
+CEC_BACK            = 23
+CEC_NEXT            = 24
+
+Encoder_Cec_Table = {
+  {
+    Name = "Dev Off",
+    Cmd  = "04:44:6C"
+  },
+  {
+    Name = "Dev On",
+    Cmd  = "04:44:6D"
+  },
+  {
+    Name = "Dev Off OT",
+    Cmd  = "0F:86:10:00"
+  },
+  {
+    Name = "Menu Root",
+    Cmd  = "00:44:09"
+  },
+  {
+    Name = "Menu Setup",
+    Cmd  = "04:44:0A"
+  },
+  {
+    Name = "Menu Content",
+    Cmd  = "04:44:0B"
+  },
+  {
+    Name = "Menu Fav",
+    Cmd  = "04:44:0C"
+  },
+  {
+    Name = "Menu Top",
+    Cmd  = "04:44:10"
+  },
+  {
+    Name = "Up",
+    Cmd  = "04:44:01"
+  },
+  {
+    Name = "Down",
+    Cmd  = "04:44:02"
+  },
+  {
+    Name = "Left",
+    Cmd  = "04:44:03"
+  },
+  {
+    Name = "Right",
+    Cmd  = "04:44:04"
+  },
+  {
+    Name = "Select",
+    Cmd  = "04:44:00"
+  },
+  {
+    Name = "Enter",
+    Cmd  = "04:44:2B"
+  },
+  {
+    Name = "Exit",
+    Cmd  = "04:44:0D"
+  },
+  {
+    Name = "Page Up",
+    Cmd  = "04:44:37"
+  },
+  {
+    Name = "Page Down",
+    Cmd  = "04:44:38"
+  },
+  {
+    Name = "Stop",
+    Cmd  = "04:44:45"
+  },
+  {
+    Name = "Play",
+    Cmd  = "04:44:44"
+  },
+  {
+    Name = "Pause",
+    Cmd  = "04:44:46"
+  },
+  {
+    Name = "Rev",
+    Cmd  = "04:44:48"
+  },
+  {
+    Name = "Fwd",
+    Cmd  = "04:44:47"
+  },
+  {
+    Name = "Back",
+    Cmd  = "04:44:4C"
+  },
+  {
+    Name = "Next",
+    Cmd  = "04:44:4B"
+  }
+}
+
+--------------------------------------------------------------------------
+--Decoder Config table
+--------------------------------------------------------------------------
+Decoder_Id_Table = {}  
+
+DEC_TYPE_ALL         = 1
+DEC_TYPE_VID         = 2
+DEC_TYPE_AUD         = 3
+DEC_TYPE_RS232       = 4
+DEC_TYPE_IR          = 5
+DEC_TYPE_USB         = 6
+DEC_TYPE_CEC         = 7
+
+Decoder_Type_Table = {
+  {
+    Name = "All",
+    Cmd  = "all",
+    Type = "Switch "
+  },
+  {
+    Name = "Video",
+    Cmd  = "v",
+    Type = "Switch "
+  },
+  {
+    Name = "Audio",
+    Cmd  = "a",
+    Type = "Switch "
+  },
+  {
+    Name = "RS232",
+    Cmd  = "s",
+    Type = "Switch "
+  },
+  {
+    Name = "IR",
+    Cmd  = "r",
+    Type = "Switch "
+  },
+  {
+    Name = "USB",
+    Cmd  = "u",
+    Type = "Switch "
+  },
+  {
+    Name = "CEC",
+    Cmd  = "c",
+    Type = "Switch "
+  }
+}
+
+DEC_CMD_VID_OFF     = 1
+DEC_CMD_VID_ON      = 2
+DEC_CMD_BLACK       = 3
+DEC_CMD_BARS        = 4
+DEC_CMD_RETURN      = 5
+DEC_CMD_RS232_OFF   = 6
+DEC_CMD_RS232_ON    = 7
+DEC_CMD_CEC_OFF     = 8
+DEC_CMD_CEC_ON      = 9
+DEC_CMD_CEC_HDMI_1  = 10
+DEC_CMD_CEC_HDMI_2  = 11
+
+Decoder_Cmd_Table   = {
+  {
+    Name  = "Video Off",
+    Cmd   = "SetVidOutD",
+    Value = "0"
+  },
+  {
+    Name  = "Video On",
+    Cmd   = "SetVidOutD",
+    Value = "1"
+  },
+  {
+    Name  = "Black",
+    Cmd   = "SetVidOutD",
+    Value = "5"
+  },
+  {
+    Name  = "Color Bars",
+    Cmd   = "SetVidOutD",
+    Value = "6"
+  },
+  {
+    Name  = "Return",
+    Cmd   = "SetVidOutD",
+    Value = "7"
+  },
+  {
+    Name  = "RS232 Off",
+    Cmd   = "RS232PwrOffD",
+    Value = "0"
+  },
+  {
+    Name  = "RS232 On",
+    Cmd   = "RS232PwrOnD",
+    Value = "0"
+  },
+  {
+    Name  = "CEC Off",
+    Cmd   = "CecPwrOffD",
+    Value = "0"
+  },
+  {
+    Name  = "CEC On",
+    Cmd   = "CecPwrOnD",
+    Value = "0"
+  },
+  {
+    Name  = "CEC HDMI1",
+    Cmd   = "CECD",
+    Value = "EF:82:10:00"
+  },
+  {
+    Name = "CEC HDMI2",
+    Cmd   = "CECD",
+    Value = "EF:82:20:00"
+  }
+}
+
+SelectDecVidId = {}
+SelectDecAudId = {}
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+---------
+--Q-SYS
+---------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+---------------------------------------------------Properties---------------------------------------------------
+function GetProperties()
+  local props = {
+    {
+      Name    = "Connection",
+      Type    = "enum",
+      Choices = {"TCP","RS232"},
+      Value   = "TCP"
+    },
+    {
+      Name = "IP",
+      Type = "string",
+      Value = "192.168.10.173"
+    },
+    {
+      Name = "TcpPort",
+      Type = "string",
+      Value = "4001",
+      Min  = "1",
+      Max  = "65535"
+    },
+    {
+      Name = "SerialName",
+      Type = "string",
+      Value = "SerialPortName"
+    },
+    {
+      Name = "baudrate",
+      Type = "enum",
+      Choices = {"115200", "57600", "5600", "38400", "19200","14400","9600","4800","2400"},
+      Value = "9600"
+    },
+    {
+      Name = "datalen",
+      Type = "enum",
+      Choices = {"7","8","9"},
+      Value = "8"
+    },   
+    {
+      Name = "stopbit",
+      Type = "enum",
+      Choices = {"1", "2"},
+      Value = "1"
+    },
+    {
+      Name = "paritybit",
+      Type = "enum",
+      Choices = {"N", "E","O"},
+      Value = "N"
+    },
+    {
+      Name = "Preset_Size",
+      Type = "string",
+      Value = "4",
+      Min  = "1",
+      Max  = "100"
+    },    
+    {
+      Name = "Encoder_Size",
+      Type = "string",
+      Value = "2",
+      Min  = "1",
+      Max  = "100"
+    },    
+    {
+      Name = "Decoder_Size",
+      Type = "string",
+      Value = "2",
+      Min  = "1",
+      Max  = "100"
+    }
+  }
+  return props
+end
+
+---------------------------------------------------Rectify Properties----------------------------------------
+function RectifyProperties(props)
+
+  local Propert = props["Connection"].Value
+    
+  props["IP"].IsHidden             = true
+  props["TcpPort"].IsHidden        = true
+  props["SerialName"].IsHidden     = true
+  props["baudrate"].IsHidden       = true
+  props["datalen"].IsHidden        = true
+  props["stopbit"].IsHidden        = true
+  props["paritybit"].IsHidden      = true
+
+  if Propert == "TCP" then
+    props["IP"].IsHidden          = false 
+    props["TcpPort"].IsHidden     = false
+  elseif Propert == "RS232" then
+    props["SerialName"].IsHidden  =  false
+    props["baudrate"].IsHidden    =  false
+    props["datalen"].IsHidden     =  false
+    props["stopbit"].IsHidden     =  false
+    props["paritybit"].IsHidden   =  false
+  end
+  return props
+end
+
+---------------------------------------------------Plugin block Name---------------------------------------
+function GetPrettyName(props)
+--      return PluginInfo["Name"] .. " v" .. PluginInfo["Version"]
+  return PluginInfo.Name.."_"..PluginInfo.Version
+end
+
+---------------------------------------------------Get Controls------------------------------------------------                                 
+function GetControls(props)
+  local ctrls = {}
+  -----------------------------------------------------------------------------------------------------
+  --MAIN Controller PAGE Component
+  -- https://help.qsys.com/DeveloperHelp/Content/Standards_Definitions/Reserved_Functions.htm
+  -----------------------------------------------------------------------------------------------------	
+  table.insert(ctrls, {
+    Name        = "NetControllerConnect", 
+    ControlType = "Button",    
+    ButtonType  = "Toggle",
+--    Description = "Connect Device",
+--    UserPin     = false,
+--    PinStyle    = "Input", 
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name          = "NetControllerStatus",  
+    ControlType   = "Indicator", 
+    IndicatorType = "LED", 
+    Count         = 1, 
+    Colorable     = true
+  })
+  
+  table.insert(ctrls, {
+    Name        = "GetStatus",  
+    ControlType = "Button", 
+    ButtonType  = "Trigger", 
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "SelectPresetId", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "SendPresetCmd",  
+    ControlType = "Button", 
+    ButtonType  = "Trigger", 
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "SetApiCmd",  
+    ControlType = "Text", 
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "SendApiCmd", 
+    ControlType = "Button", 
+    ButtonType  = "Trigger", 
+    Count       = 1
+  })
+
+--[[
+  table.insert(ctrls, {
+    Name        = "SendApiCmdText", 
+    ControlType = "Text",   
+    Count       = 1
+    Description = "Send API command",
+    UserPin     = true,
+    PinStyle    = "Input", 
+  })
+]]
+  -----------------------------------------------------------------------------------------------------
+  --Encoder PAGE Component
+  -----------------------------------------------------------------------------------------------------
+  table.insert(ctrls, {
+    Name        = "SelectEncCecCmdId",   
+    ControlType = "Text",   
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "SelectEncCecCmd",     
+    ControlType = "Text",   
+    Count       = 1
+  })
+  
+  table.insert(ctrls, {
+    Name        = "SendEncCecCmd",       
+    ControlType = "Button", 
+    ButtonType  = "Trigger", 
+    Count       = 1
+  }) 
+  
+  table.insert(ctrls, {
+    Name        = "EncCecCmdName",
+    ControlType = "Text",   
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "SelectEncRs232Id",    
+    ControlType = "Text",   
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "SetEncRs232Cmd",      
+    ControlType = "Text",   
+    Count       = 1
+  })
+  
+  table.insert(ctrls, {
+    Name        = "SendEncRs232Cmd",     
+    ControlType = "Button", 
+    ButtonType  = "Trigger", 
+    Count       = 1
+  })
+  
+  table.insert(ctrls, {
+    Name         = "SetEncRs232Cfg",      
+    ControlType  = "Text",   
+    Count        = 1
+  })
+  
+  table.insert(ctrls, {
+    Name        = "EncRs232CmdName",     
+    ControlType = "Text",   
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "SelectEncAudInputId", 
+    ControlType = "Text",   
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "SetEncAudInputHdmi",  
+    ControlType = "Button", 
+    ButtonType  = "Toggle", 
+    Count       = 1
+  })
+  
+  table.insert(ctrls, {
+    Name        = "SetAudInputAnalog",   
+    ControlType = "Button", 
+    ButtonType  = "Toggle", 
+    Count       = 1
+  })
+  
+  table.insert(ctrls, {
+    Name        = "EncAudInputName",     
+    ControlType = "Text",   
+    Count       = 1
+  })
+
+  -----------------------------------------------------------------------------------------------------
+  --Decoder PAGE Component
+  -----------------------------------------------------------------------------------------------------	
+  --Rounting
+	table.insert(ctrls, {
+    Name        = "SelectEncSwitchId",  
+    ControlType = "Text", 
+    Count       = 1
+  })
+
+	table.insert(ctrls, {
+    Name        = "SelectDecSwitchId",  
+    ControlType = "Text", 
+    Count       = 1
+  })
+	
+  table.insert(ctrls, {
+    Name        = "SelectSwitchType",   
+    ControlType = "Text", 
+    Count       = 1
+  })
+	
+  table.insert(ctrls, {
+    Name        = "SendSwitch",         
+    ControlType = "Button",
+    ButtonType  = "Trigger", 
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "EncSwitchName",      
+    ControlType = "Text", 
+    Count       = 1
+  })
+  
+  table.insert(ctrls, {
+    Name        = "DecSwitchName",     
+    ControlType = "Text", 
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "DecSwitchRouteName", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+  
+  table.insert(ctrls, {
+    Name        = "ShowDecRoute",      
+    ControlType = "Text", 
+    Count       = 1
+  })
+	
+	table.insert(ctrls, {
+    Name        = "SelectDecCmdId",     
+    ControlType = "Text", 
+    Count       = 1
+  })
+	
+  table.insert(ctrls, {
+    Name        = "SelectDecCmd",       
+    ControlType = "Text", 
+    Count       = 1
+  })
+	
+  table.insert(ctrls, {
+    Name        = "SendDecCmd",         
+    ControlType = "Button",
+    ButtonType  = "Trigger", 
+    Count       = 1
+  })
+	
+  table.insert(ctrls, {
+    Name        = "DecCmdName",         
+    ControlType = "Text", 
+    Count       = 1
+  })
+
+ 	table.insert(ctrls, {
+    Name        = "SelectDecRs232CmdId", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+  table.insert(ctrls, {
+    Name        = "SetDecRs232Cmd",      
+    ControlType = "Text", 
+    Count       = 1
+  })
+  table.insert(ctrls, {
+    Name        = "SendDecRs232Cmd",     
+    ControlType = "Button", 
+    ButtonType  = "Trigger", 
+    Count       = 1
+  })
+  table.insert(ctrls, {
+    Name        = "SetDecRs232Cfg",      
+    ControlType = "Text",   
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "DecRs232CmdName",     
+    ControlType = "Text", 
+    Count       = 1
+  })
+
+ 	table.insert(ctrls, {
+    Name        = "VidWallName",     
+    ControlType = "Text", 
+    Count       = 1
+  })
+	table.insert(ctrls, {
+    Name        = "SendDecVidWallOn",    
+    ControlType = "Button", 
+    ButtonType  = "Toggle", 
+    Count       = 1
+  })
+  table.insert(ctrls, {
+    Name        = "SendDecVidWallOff",    
+    ControlType = "Button", 
+    ButtonType  = "Toggle", 
+    Count       = 1
+  })
+  -----------------------------------------------------------------------------------------------------
+  --AV Route PAGE Component
+  -----------------------------------------------------------------------------------------------------	
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidId_1", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidId_2", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidId_3", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidId_4", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidId_5", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidId_6", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidId_7", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidId_8", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+
+
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidName_1", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidName_2", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidName_3", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidName_4", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidName_5", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidName_6", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidName_7", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecVidName_8", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+   	table.insert(ctrls, {
+    Name        = "SelectDecAudId_1", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecAudId_2", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecAudId_3", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecAudId_4", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecAudId_5", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecAudId_6", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecAudId_7", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecAudId_8", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+
+  table.insert(ctrls, {
+    Name        = "SelectDecAudName_1", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecAudName_2", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecAudName_3", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+ 	table.insert(ctrls, {
+    Name        = "SelectDecAudName_4", 
+    ControlType = "Text", 
+    Count       = 1
+  })
+
+   -- Setup Pins
+
+ 	table.insert(ctrls, {
+    Name        = "SendApi", 
+    ControlType = "Text", 
+    Count       = 1,
+    PinStyle    = "Input",
+    UserPin     = true
+  })
+
+  local Presetsize  = props["Preset_Size"].Value
+  Presetsize = tonumber(Presetsize) or 10
+  for i = 1, Presetsize do
+    table.insert(ctrls, {
+      Name = "Preset_"..i,
+      ControlType = "Button",
+      ButtonType = "Trigger",
+      PinStyle = "Input",
+      UserPin = true
+    })
+  end
+
+  local Decodersize = props["Decoder_Size"].Value
+  Decodersize = tonumber(Decodersize) or 8
+  for i = 1, Decodersize do
+    table.insert(ctrls, {
+      Name = "DecoderVid_"..i,
+      ControlType = "Text",   
+      PinStyle = "Input",
+      UserPin = true
+    })
+  end
+
+  for i = 1, Decodersize do
+    table.insert(ctrls, {
+      Name = "DecoderAud_"..tostring(i),
+      ControlType = "Text",   
+      PinStyle = "Input",
+      UserPin = true
+    })
+  end
+
+  for i = 1, Decodersize do
+    table.insert(ctrls, {
+      Name = "DecoderCmd_"..tostring(i),
+      ControlType = "Text",   
+      PinStyle = "Input",
+      UserPin = true
+    })
+  end
+
+  local Encodersize = props["Encoder_Size"].Value
+  Encodersize = tonumber(Encodersize) or 8
+  for i = 1, Encodersize do
+    table.insert(ctrls, {
+      Name = "EncoderCecCmd_"..i,
+      ControlType = "Text",   
+      PinStyle = "Input",
+      UserPin = true
+    })
+  end
+ 
+	return ctrls  
+end
+--------------------------------------------------Control Layout------------------------------------------------
+--"GetControls"
+function GetControlLayout(props)
+  local layout   = {}
+  local graphics = {} 
+  local offset1  = 20
+  local offset2  = 40
+  local offset3  = 60
+  local offset4  = 80
+
+  -- Setup Pins
+
+  layout["SendApi"] = {
+    Style = "None",
+    PrettyName = "API Direct"
+  }
+
+  local Presetsize  = props["Preset_Size"].Value
+  Presetsize = tonumber(Presetsize) or 10
+  for i = 1, Presetsize do
+    layout["Preset_" .. i] = {
+      Style = "None",
+      PrettyName = "Preset Btns~".. i
+    }
+  end
+
+  local Decodersize = props["Decoder_Size"].Value
+  Decodersize = tonumber(Decodersize) or 8
+  for i = 1, Decodersize do
+    layout["DecoderVid_" .. i] = {
+      Style = "None",
+      PrettyName = "Video Decoders~".. i
+    }
+  end
+
+  for i = 1, Decodersize do
+    layout["DecoderAud_" .. i] = {
+      Style = "None",
+      PrettyName = "Audio Decoders~".. i
+    }
+  end
+
+  for i = 1, Decodersize do
+    layout["DecoderCmd_" .. i] = {
+      Style = "None",
+      PrettyName = "Cmd Decoders~".. i
+    }
+  end
+
+  local Encodersize = props["Encoder_Size"].Value
+  Encodersize = tonumber(Encodersize) or 8
+  for i = 1, Encodersize do
+    layout["EncoderCecCmd_" .. i] = {
+      Style = "None",
+      PrettyName = "CEC Cmd Encoders~".. i
+    }
+  end
+
+  -----------------------------------------------------------------------------------------------------
+  --Main PAGE Component
+  -----------------------------------------------------------------------------------------------------		
+  if props['page_index'].Value == 1 then	
+    layout["NetControllerConnect"] = {PrettyName = "Connect the controller network", Style = "Button",   Position = {170,80}, Size = {100,30}, IsReadOnly = false}
+    layout["NetControllerStatus"]  = {PrettyName = "Controller connect status",      Style = "LED",      Position = {335,80}, Size = {30,30},  IsReadOnly = true}	
+    layout["GetStatus"]            = {PrettyName = "Get Status",                     Style = "Button",   Position = {440,80}, Size = {50,20},  FontSize = 12, IsReadOnly = false}
+    
+    layout["SelectPresetId"]       = {PrettyName = "Select Preset",                  Style = "ComboBox", Position = {18,210},  Size = {115,20}, FontSize = 12, IsReadOnly = false}
+    layout["SendPresetCmd"]        = {PrettyName = "Send Preset",                    Style = "Button",   Position = {142,210}, Size = {50,20},  FontSize = 12, IsReadOnly = false}
+    layout["SetApiCmd"]            = {PrettyName = "Enter API Command",              Style = "Text Box", Position = {200,210}, Size = {290,20}, FontSize = 12, IsReadOnly = false}
+    layout["SendApiCmd"]           = {PrettyName = "Send API Command",               Style = "Button",   Position = {500,210}, Size = {50,20},  FontSize = 12, IsReadOnly = false}
+
+    graphics = 
+    {			 		 
+      {Type = "Text",     Position = {5,20},   Size = {147,30}, FontSize = 18, Text = "Network Connect", FontStyle = "Regular", HTextAlign = "Left"},   
+      {Type = "GroupBox", Position = {5,50},   Size = {550,80}, FontSize = 16, Fill = {190, 195, 200} },
+      {Type = "Text",     Position = {170,60}, Size = {100,20}, FontSize = 16, Text = "Connect",    FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}, 
+      {Type = "Text",     Position = {300,60}, Size = {100,20}, FontSize = 16, Text = "Status" ,    FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}, 
+      {Type = "Text",     Position = {410,60}, Size = {100,20}, FontSize = 16, Text = "Get Status", FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"},
+      
+      {Type = "Text",     Position = {5,140},   Size = {163,30},  FontSize = 18, Text = "Presets & API", FontStyle = "Bold", HTextAlign= "Left"},  
+      {Type = "GroupBox", Position = {5,170},   Size = {550,100}, FontSize = 16, Fill = {190, 195, 200} },
+      {Type = "Text",     Position = {35,180},  Size = {80,20},   FontSize = 16, Text = "Presets",     FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}, 
+      {Type = "Text",     Position = {140,180}, Size = {53,20},   FontSize = 16, Text = "Send",        FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"},
+      {Type = "Text",     Position = {270,180}, Size = {120,20},  FontSize = 16, Text = "API Command", FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"},
+      {Type = "Text",     Position = {500,180}, Size = {53,20},   FontSize = 16, Text = "Send",        FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"},
+      {Type = "Text",     Position = {250,235}, Size = {180,20},  FontSize = 16, Text = "Example: Switch 2 3 v", FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}
+    }
+  -----------------------------------------------------------------------------------------------------
+  --Encoder PAGE Component
+  -----------------------------------------------------------------------------------------------------		
+  elseif props['page_index'].Value == 2 then
+    ----------------------
+    --CEC
+    ----------------------
+    layout["SelectEncCecCmdId"] = {PrettyName = "Select Encoder",         Style = "ComboBox", Position = {18,90},  Size = {115,20}, FontSize = 12, IsReadOnly = false}
+    layout["SelectEncCecCmd"]   = {PrettyName = "Select Encoder CEC Cmd", Style = "ComboBox", Position = {140,90}, Size = {140,20}, FontSize = 12, IsReadOnly = false}
+    layout["SendEncCecCmd"]     = {PrettyName = "Send Encoder CEC Cmd",   Style = "Button",   Position = {286,90}, Size = {50,20},  FontSize = 12, IsReadOnly = false}
+    layout["EncCecCmdName"]     = {PrettyName = "Display Encoder",        Style = "Text Box", Position = {18,120}, Size = {115,20}, FontSize = 12, IsReadOnly = false}
+    ----------------------
+    --RS232
+    ----------------------
+    layout["SelectEncRs232Id"] = {PrettyName = "Select Encoder",          Style = "ComboBox",   Position = {18,210 + offset1},  Size = {115,20}, FontSize = 12, IsReadOnly = false}
+    layout["SetEncRs232Cmd"]   = {PrettyName = "Enter Encoder RS232 Cmd", Style = "Text Block", Position = {140,210 + offset1}, Size = {326,20}, FontSize = 12, IsReadOnly = false}
+    layout["SendEncRs232Cmd"]  = {PrettyName = "Set Encoder RS232",       Style = "Button",     Position = {473,210 + offset1}, Size = {50,20},  FontSize = 12, IsReadOnly = false}
+    layout["SetEncRs232Cfg"]   = {PrettyName = "Set RS232 Configuration", Style = "Text Block", Position = {205,240 + offset1}, Size = {115,20}, FontSize = 12, IsReadOnly = false}
+    layout["EncRs232CmdName"]  = {PrettyName = "Display Encoder",         Style = "Text Box",   Position = {18,240 + offset1},  Size = {115,20}, FontSize = 12, IsReadOnly = false}
+
+    ----------------------
+    --Audio
+    ----------------------
+    layout["SelectEncAudInputId"] = {PrettyName = "Select Encoder",           Style = "ComboBox", Position = {18,330 + offset2},  Size = {115,20}, FontSize = 12, IsReadOnly = false}
+    layout["SetEncAudInputHdmi"]  = {PrettyName = "Set Encoder Audio HDMI",   Style = "Button",   Position = {145,330 + offset2}, Size = {50,20},  FontSize = 12, IsReadOnly = false}
+    layout["SetAudInputAnalog"]   = {PrettyName = "Set Encoder Audio Analog", Style = "Button",   Position = {210,330 + offset2}, Size = {50,20},  FontSize = 12, IsReadOnly = false} 
+    layout["EncAudInputName"]     = {PrettyName = "Display Encoder",          Style = "Text Box", Position = {18,360 + offset2},  Size = {115,20}, FontSize = 12, IsReadOnly = false}
+
+    graphics = 
+    {
+      ----------------------
+      -- CEC
+      ----------------------
+      {Type = "Text",     Position = {5,20},   Size = {147,30}, FontSize = 18, Text = "CEC Commands", FontStyle = "Regular", HTextAlign = "Left"},   
+      {Type = "GroupBox", Position = {5,50},   Size = {550,80 + offset1}, FontSize = 16, Fill = {190, 195, 200} },
+      {Type = "Text",     Position = {40,60},  Size = {65,20},  FontSize = 16, Text = "Encoder", FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}, 
+      {Type = "Text",     Position = {165,60}, Size = {80,20},  FontSize = 16, Text = "Command", FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}, 
+      {Type = "Text",     Position = {285,60}, Size = {50,20},  FontSize = 16, Text = "Send",    FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}, 
+      ----------------------
+      -- RS232  
+      ----------------------
+      {Type = "Text",     Position = {5,140   + offset1}, Size = {163,30}, FontSize = 18, Text = "RS232 Commands", FontStyle = "Bold", HTextAlign= "Left"},  
+      {Type = "GroupBox", Position = {5,170   + offset1}, Size = {550,80 + offset1}, FontSize = 16, Fill = {190, 195, 200} },
+      {Type = "Text",     Position = {40,180  + offset1}, Size = {65,20},  FontSize = 16, Text = "Encoder", FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}, 
+      {Type = "Text",     Position = {260,180 + offset1}, Size = {80,20},  FontSize = 16, Text = "Command", FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}, 
+      {Type = "Text",     Position = {470,180 + offset1}, Size = {50,20},  FontSize = 16, Text = "Send",    FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}, 
+      {Type = "Text",     Position = {140,240 + offset1}, Size = {70,20},  FontSize = 16, Text = "Config:", FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}, 
+      ----------------------
+      -- Signal Audio input Setting
+      ----------------------
+      {Type = "Text",     Position = {5,260   + offset2}, Size = {163,30}, FontSize = 18, Text = "Audio Settings", FontStyle = "Regular",HTextAlign = "Left"},   
+      {Type = "GroupBox", Position = {5,290   + offset2}, Size = {550,80 + offset1}, FontSize = 16, Fill = {190, 195, 200} }, 
+      {Type = "Text",     Position = {35,300  + offset2}, Size = {65,20},  FontSize = 16, Text = "Encoder", FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"},
+      {Type = "Text",     Position = {143,300 + offset2}, Size = {53,20},  FontSize = 16, Text = "HDMI",    FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}, 
+      {Type = "Text",     Position = {204,300 + offset2}, Size = {65,20},  FontSize = 16, Text = "Analog",  FontStyle = "Bold", HTextAlign= "Center", Font= "Roboto"}
+    }									
+  -----------------------------------------------------------------------------------------------------
+  --Decoder PAGE Component
+  -----------------------------------------------------------------------------------------------------			
+  elseif props['page_index'].Value == 3 then
+      ----------------------
+      -- Rounting
+      ----------------------
+    layout["SelectEncSwitchId"] = {PrettyName = "Select Encoder",               Style = "ComboBox", Position = {18,90},   Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecSwitchId"] = {PrettyName = "Select Decoder",               Style = "ComboBox", Position = {140,90},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectSwitchType"]  = {PrettyName = "Select Switch Type",           Style = "ComboBox", Position = {260,90},  Size = {98,20},   FontSize = 12, IsReadOnly = false}
+    layout["SendSwitch"]        = {PrettyName = "Send Encoder Cmd to Decoder",  Style = "Button",   Position = {364,90},  Size = {50,20},   FontSize = 12, IsReadOnly = false}
+    layout["EncSwitchName"]     = {PrettyName = "Display Encoder",              Style = "Text Box", Position = {18,120},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["DecSwitchName"]     = {PrettyName = "Display Decoder",              Style = "Text Box", Position = {140,120},  Size = {115,20}, FontSize = 12, IsReadOnly = false}
+    layout["ShowDecRoute"]      = {PrettyName = "Show Decoder Route",           Style = "Text Box", Position = {260,120},  Size = {280,40}, FontSize = 12, IsReadOnly = false}
+    ----------------------
+    --Commands
+    ----------------------
+    layout["SelectDecCmdId"] = {PrettyName = "Select Decoder",          Style = "ComboBox", Position = {18,210 + offset2},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecCmd"]   = {PrettyName = "Select Decoder Command",  Style = "ComboBox", Position = {140,210 + offset2}, Size = {140,20},  FontSize = 12, IsReadOnly = false}
+    layout["SendDecCmd"]     = {PrettyName = "Send Command to Decoder", Style = "Button",   Position = {285,210 + offset2}, Size = {50,20},  FontSize = 12,  IsReadOnly = false}
+    layout["DecCmdName"]     = {PrettyName = "Display Decoder",         Style = "Text Box", Position = {18,240 + offset2},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    ----------------------
+    --RS232 Commands
+    ----------------------
+    layout["SelectDecRs232CmdId"] = {PrettyName = "Select Decoder",              Style = "ComboBox",   Position = {18,330 + offset3},  Size = {115,20}, FontSize = 12, IsReadOnly = false}
+    layout["DecRs232CmdName"]     = {PrettyName = "Display Decoder",             Style = "Text Box",   Position = {18,360 + offset3},  Size = {115,20}, FontSize = 12, IsReadOnly = false}
+    layout["SetDecRs232Cmd"]      = {PrettyName = "Enter Decoder RS232 Command", Style = "Text Block", Position = {140,330 + offset3}, Size = {326,20}, FontSize = 12, IsReadOnly = false}
+    layout["SendDecRs232Cmd"]     = {PrettyName = "Send Command to Decoder",     Style = "Button",     Position = {479,330 + offset3}, Size = {50,20},  FontSize = 12, IsReadOnly = false}
+    layout["SetEncRs232Cfg"]      = {PrettyName = "Set RS232 Configuration",     Style = "Text Block", Position = {205,360 + offset3}, Size = {115,20}, FontSize = 12, IsReadOnly = false}
+    
+    ----------------------
+    --Video Wall
+    ----------------------
+    layout["VidWallName"]        = {PrettyName = "Video Wall Name",    Style = "Text Box", Position = {18,450 + offset4},  Size = {170,20}, FontSize = 12, IsReadOnly = false}
+    layout["SendDecVidWallOn"]   = {PrettyName = "Video Wall On",      Style = "Button",   Position = {200,450 + offset4}, Size = {50,20},  FontSize = 12, IsReadOnly = false}
+    layout["SendDecVidWallOff"]  = {PrettyName = "Video Wall Off",     Style = "Button",   Position = {260,450 + offset4}, Size = {50,20},  FontSize = 12, IsReadOnly = false}
+
+    graphics = 
+    {
+      ----------------------
+      -- Rounting
+      ----------------------
+      {Type = "Text",     Position = {5,20},   Size = {550,30}, FontSize = 18, Text = "Signal Rounting", FontStyle = "Regular",HTextAlign = "Left"}, 
+      {Type = "GroupBox", Position = {5,50},   Size = {550,80 + offset2}, FontSize = 16, Fill = {190, 195, 200} },
+      {Type = "Text",     Position = {40,60},  Size = {65,20},  FontSize = 16, Text = "Encoder", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"},
+      {Type = "Text",     Position = {165,60}, Size = {65,20},  FontSize = 16, Text = "Decoder", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {266,60}, Size = {80,20},  FontSize = 16, Text = "Type",    FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {349,60}, Size = {80,20},  FontSize = 16, Text = "Send",    FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+              
+      ----------------------
+      -- Commands
+      ----------------------
+      {Type = "Text",     Position = {5,140   + offset2}, Size = {147,30}, FontSize = 18, Text = "Commands", FontStyle = "Regular", HTextAlign = "Left"},   
+      {Type = "GroupBox", Position = {5,170   + offset2}, Size = {550,80 + offset1}, FontSize = 16, Fill = {190, 195, 200} },
+      {Type = "Text",     Position = {40,180  + offset2}, Size = {65,20},  FontSize = 16, Text = "Decoder", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {165,180 + offset2}, Size = {80,20},  FontSize = 16, Text = "Command", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {285,180 + offset2}, Size = {50,20},  FontSize = 16, Text = "Send",    FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      ----------------------
+      -- RS232
+      ----------------------
+      {Type = "Text",     Position = {5,260   + offset3}, Size = {163,30},          FontSize = 18, Text = "RS232 Commands", FontStyle = "Bold", HTextAlign = "Left"},  
+      {Type = "GroupBox", Position = {5,290   + offset3}, Size = {550,80 + offset1}, FontSize = 16, Fill = {190, 195, 200} },
+      {Type = "Text",     Position = {40,300  + offset3}, Size = {65,20},           FontSize = 16, Text = "Decoder", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {260,300 + offset3}, Size = {80,20},           FontSize = 16, Text = "Command", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {471,300 + offset3}, Size = {53,20},           FontSize = 16, Text = "Send",    FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {140,360 + offset3}, Size = {70,20},           FontSize = 16, Text = "Config:", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+
+      ----------------------
+      -- Video Wall
+      ----------------------
+      {Type = "Text",     Position = {5,380   + offset4}, Size = {170,30}, FontSize = 18, Text = "Video Wall", FontStyle = "Bold", HTextAlign = "Left"},  
+      {Type = "GroupBox", Position = {5,410   + offset4}, Size = {550,80 + offset1}, FontSize = 16, Fill = {190, 195, 200} },
+      {Type = "Text",     Position = {30,420  + offset4}, Size = {150,20}, FontSize = 16, Text = "Video Wall Name", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {210,420 + offset4}, Size = {250,20}, FontSize = 16, Text = "On          Off", FontStyle = "Bold", HTextAlign = "Left", Font = "Roboto"} 
+    }  
+  -----------------------------------------------------------------------------------------------------
+  --AV Name PAGE Component
+  -----------------------------------------------------------------------------------------------------			
+  elseif props['page_index'].Value == 4 then
+    offset1 = 240
+    ----------------------
+    --Video Status
+    ----------------------
+    layout["SelectDecVidId_1"] = {PrettyName = "Select Decoder Video #1", Style = "ComboBox", Position = {22,90},   Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidId_2"] = {PrettyName = "Select Decoder Video #2", Style = "ComboBox", Position = {144,90},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidId_3"] = {PrettyName = "Select Decoder Video #3", Style = "ComboBox", Position = {266,90},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidId_4"] = {PrettyName = "Select Decoder Video #4", Style = "ComboBox", Position = {388,90},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidId_5"] = {PrettyName = "Select Decoder Video #5", Style = "ComboBox", Position = {22,180},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidId_6"] = {PrettyName = "Select Decoder Video #6", Style = "ComboBox", Position = {144,180}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidId_7"] = {PrettyName = "Select Decoder Video #7", Style = "ComboBox", Position = {266,180}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidId_8"] = {PrettyName = "Select Decoder Video #8", Style = "ComboBox", Position = {388,180}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+
+    layout["SelectDecVidName_1"] = {PrettyName = "Show Decoder Video #1", Style = "Text Box", Position = {22,120},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidName_2"] = {PrettyName = "Show Decoder Video #2", Style = "Text Box", Position = {144,120}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidName_3"] = {PrettyName = "Show Decoder Video #3", Style = "Text Box", Position = {266,120}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidName_4"] = {PrettyName = "Show Decoder Video #4", Style = "Text Box", Position = {388,120}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidName_5"] = {PrettyName = "Show Decoder Video #5", Style = "Text Box", Position = {22,210},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidName_6"] = {PrettyName = "Show Decoder Video #6", Style = "Text Box", Position = {144,210}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidName_7"] = {PrettyName = "Show Decoder Video #7", Style = "Text Box", Position = {266,210}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecVidName_8"] = {PrettyName = "Show Decoder Video #8", Style = "Text Box", Position = {388,210}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    ----------------------
+    --Audio Status
+    ----------------------
+    layout["SelectDecAudId_1"] = {PrettyName = "Select Decoder Audio #1", Style = "ComboBox", Position = {22,90  + offset1},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecAudId_2"] = {PrettyName = "Select Decoder Audio #2", Style = "ComboBox", Position = {144,90 + offset1},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecAudId_3"] = {PrettyName = "Select Decoder Audio #3", Style = "ComboBox", Position = {266,90 + offset1},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecAudId_4"] = {PrettyName = "Select Decoder Audio #4", Style = "ComboBox", Position = {388,90 + offset1},  Size = {115,20},  FontSize = 12, IsReadOnly = false}
+
+    layout["SelectDecAudName_1"] = {PrettyName = "Show Decoder Audio #1", Style = "Text Box", Position = {22,120  + offset1}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecAudName_2"] = {PrettyName = "Show Decoder Audio #2", Style = "Text Box", Position = {144,120 + offset1}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecAudName_3"] = {PrettyName = "Show Decoder Audio #3", Style = "Text Box", Position = {266,120 + offset1}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+    layout["SelectDecAudName_4"] = {PrettyName = "Show Decoder Audio #4", Style = "Text Box", Position = {388,120 + offset1}, Size = {115,20},  FontSize = 12, IsReadOnly = false}
+
+    graphics = 
+    {
+      ----------------------
+      -- Video
+      ----------------------
+      {Type = "Text",     Position = {5,20},    Size = {550,30},  FontSize = 18, Text = "Video Status - Select a Decoder", FontStyle = "Regular",HTextAlign = "Left"}, 
+      {Type = "GroupBox", Position = {5,50},    Size = {550,200}, FontSize = 16, Fill = {190, 195, 200} },
+      {Type = "Text",     Position = {40,60},   Size = {80,20},   FontSize = 16, Text = "Status-1", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"},
+      {Type = "Text",     Position = {160,60},  Size = {80,20},   FontSize = 16, Text = "Status-2", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {280,60},  Size = {80,20},   FontSize = 16, Text = "Status-3", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {400,60},  Size = {80,20},   FontSize = 16, Text = "Status-4", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {40,150},  Size = {80,20},   FontSize = 16, Text = "Status-5", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {160,150}, Size = {80,20},   FontSize = 16, Text = "Status-6", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {280,150}, Size = {80,20},   FontSize = 16, Text = "Status-7", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {400,150}, Size = {80,20},   FontSize = 16, Text = "Status-8", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+              
+      ----------------------
+      -- Audio
+      ----------------------
+      {Type = "Text",     Position = {5,20  + offset1},  Size = {550,30},  FontSize = 18, Text = "Audio Status - Select a Decoder", FontStyle = "Regular",HTextAlign = "Left"}, 
+      {Type = "GroupBox", Position = {5,50  + offset1},  Size = {550,120}, FontSize = 16, Fill = {190, 195, 200} },
+      {Type = "Text",     Position = {40,60 + offset1},  Size = {80,20},   FontSize = 16, Text = "Status-1", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"},
+      {Type = "Text",     Position = {160,60 + offset1}, Size = {80,20},   FontSize = 16, Text = "Status-2", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {280,60 + offset1}, Size = {80,20},   FontSize = 16, Text = "Status-3", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+      {Type = "Text",     Position = {400,60 + offset1}, Size = {80,20},   FontSize = 16, Text = "Status-4", FontStyle = "Bold", HTextAlign = "Center", Font = "Roboto"}, 
+
+    }  
+  end
+  return layout, graphics
+end
+
+
+---------------------------------------------------get page--------------------------------------------------
+function GetPages(props)
+  return
+  {
+    { name = "Controller"},
+    { name = "Encoder"   },
+    { name = "Decoder"   },
+    { name = "AV Names"  }
+    --{ name = "Routing"   }
+  }
+end
+
+---------------------------------------------------get Pins---------------------------------------------
+--[[
+function GetPins(props)
+  local pins = {}
+  
+  local Presetsize  = props["Preset_Size"].Value
+  Presetsize = tonumber(Presetsize) or 10
+  local Decodersize = props["Decoder_Size"].Value
+  Decodersize = tonumber(Decodersize) or 8
+  
+  for i = 1, Presetsize do
+    table.insert(pins, {
+      Name = "Preset_"..tostring(i),
+      Direction = "input"
+      Type = "control"
+    })
+  end
+  for i = 1, Decodersize do
+    table.insert(pins, {
+      Name = "DecoderVid_"..tostring(i),
+      Direction = "input"
+      Type = "control"
+    })
+  end
+  for i = 1, Decodersize do
+    table.insert(pins, {
+      Name = "DecoderAud_"..tostring(i),
+      Direction = "input"
+      Type = "control"
+    })
+  end
+  
+  return pins
+end
+]]
+
+---------------------------------------------------get Components---------------------------------------------
+function GetComponents(props)  
+  return {}
+end
+
+
+--------------------------------------------------------------------------
+--
+--------------------------------------------------------------------------
+function norm_spaces_lower(s)
+  s = s:gsub("\r\n", " ")           --  CRLF 
+  s = s:gsub("[%z\1-\31]", " ")     -- 0x00-0x1F
+  s = s:gsub("\194\160", " ")       -- UTF-8 NBSP (0xC2 0xA0)
+  s = s:gsub("%s+", " ")            -- 
+  s = s:gsub("^%s+", ""):gsub("%s+$", "")
+  s = s:lower()                     -- 
+  return s
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+-- Define the Queue class
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Que = {}
+
+function Que:New()
+  local list = { first = 1, last = 0 }
+  self.__index = self
+  return setmetatable(list, self)
+end
+
+-- Check if queue is empty
+function Que:Size()
+  return self.last - self.first + 1
+end
+
+function Que:Clear()
+  self.first = 1
+  self.last = 0
+end
+
+-- Add an item to the end of the queue
+function Que:Push(val)
+
+  --print("Push:"..val)
+
+--  if NET.Connected == 1 then
+    self.last = self.last + 1
+    self[self.last] = val
+    if not TxQueTimer:IsRunning() then
+      TxQueTimer:Start(.1) -- In seconds .1 = 100ms
+    end
+  --end
+end
+
+-- Remove and return the item from the front of the queue
+function Que:Pop()
+  if self.first > self.last then
+    return nil -- Safely handles an empty queue
+  end
+  local value = self[self.first]
+  self[self.first] = nil
+  self.first = self.first + 1
+--  print("Pop: "..value)
+  return value
+end
+
+TxQue = Que:New()
+
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+serialName = nil
+
+function SendData_ToDevices(sendData)
+  local CommMode = Properties["Connection"].Value
+    print("CommMode "..CommMode.." sendData:"..sendData)
+  
+  --TCP  
+  if CommMode == "TCP" and Controls.NetControllerConnect.Value == 1 then 
+   	NET.TcpClient:Write(">"..sendData.."\r") 
+    print("TCP Send cmd: >"..sendData)
+   
+  -- RS232
+  elseif CommMode == "RS232" then  
+		serialNume:Write(">"..sendData.."\r") 
+    print("Serial Send cmd: >"..sendData)
+  end
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function parse_command(raw)
+	local msg = norm_spaces_lower(raw)	
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function CommponemtStatus_handle(raw)
+
+end
+
+Encoder_Name_Table = {}
+Decoder_Name_Table = {}
+Decoder_Status_Table = {}
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--ShowRoute
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function ShowRoute (Index, DecType)
+  local EncVid = tonumber(Decoder_Status_Table[Index].TypeVid) -- String
+  local EncAud = tonumber(Decoder_Status_Table[Index].TypeAud)
+  local EncRs  = tonumber(Decoder_Status_Table[Index].TypeRS232)
+  local EncIr  = tonumber(Decoder_Status_Table[Index].TypeIR)
+  local EncUsb = tonumber(Decoder_Status_Table[Index].TypeUsb)
+  local EncCec = tonumber(Decoder_Status_Table[Index].TypeCec)
+  local EncVidName
+  local EncAudName
+  local EncRsName
+  local EncIrName
+  local EncUsbName
+  local EncCecName
+
+--  print ("ShowRoute Index: "..tostring(Index)) 
+
+  --print("EncVid: "..EncVid.." EncAud: "..EncAud)
+
+    if EncVid == 0 then
+    EncVidName = "None"
+  else
+    EncVidName = Encoder_Name_Table[EncVid]
+  end
+  if EncAud == 0 then
+    EncAudName = "None"
+  else
+    EncAudName = Encoder_Name_Table[EncAud]
+  end
+  if EncRs == 0 then
+    EncRsName = "None"
+  else
+    EncRsName = Encoder_Name_Table[EncRs]
+  end
+  if EncIr == 0 then
+    EncIrName = "None"
+  else
+    EncIrName = Encoder_Name_Table[EncIr]
+  end
+  if EncUsb == 0 then
+    EncUsbName = "None"
+  else
+    EncUsbName = Encoder_Name_Table[EncUsb]
+  end
+  if EncCec == 0 then
+    EncCecName = "None"
+  else
+    EncCecName = Encoder_Name_Table[EncCec]
+  end
+    Controls[DecType].String = "Vid: "..EncVidName.." | Aud: "..EncAudName.." | RS: "..EncRsName.."\r"..
+                               "IR: "..EncIrName.." | USB: "..EncUsbName.." | CEC: "..EncCecName
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--ShowVidRoute
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function ShowVidRoute (Index, DecName, Dec)
+  local EncVid = tonumber(Decoder_Status_Table[Index].TypeVid)
+  local EncVidName
+
+  --print ("ShowVidRoute Index: "..tostring(Index).." Dec: "..tostring(Dec)) 
+  if EncVid == 0 then
+    EncVidName = "None"
+  else
+    EncVidName = Encoder_Name_Table[EncVid]
+  end
+    Controls[DecName].String = EncVidName
+end
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--ShowAudRoute
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function ShowAudRoute (Index, DecName, Dec)
+  local EncAud = tonumber(Decoder_Status_Table[Index].TypeAud)
+  local EncAudName
+
+  --print ("ShowAudRoute Index: "..tostring(Index).." Dec: "..tostring(Dec)) 
+
+  if EncAud == 0 then
+    EncAudName = "None"
+  else
+    EncAudName = Encoder_Name_Table[EncAud]
+  end
+  Controls[DecName].String = EncAudName
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--SetEncoderNames
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function SetEncoderNames(raw)
+  local input = raw
+  local tab = {}
+  --local index = nil
+  --local decoder = nil
+   -- print ("raw "..raw)
+
+-- [^,%s]+ matches any character sequence that is NOT a comma or whitespace
+  for results in string.gmatch(input, "[^,%s]+") do
+   -- print ("results "..results..", ")
+    table.insert(tab, results)
+  end
+
+  local index = tonumber(tab[1])
+  Encoder_Name_Table[index] = tab[2]
+
+  if index == #Encoder_Id_Table then
+
+    for i = 1, #Encoder_Id_Table do
+      if tonumber(Controls.SelectEncCecCmdId.String) == i then
+        Controls.EncCecCmdName.String = Encoder_Name_Table[i]
+      break
+      end
+    end
+
+    for i = 1, #Encoder_Id_Table do
+      if tonumber(Controls.SelectEncRs232Id.String) == i then
+        Controls.EncRs232CmdName.String = Encoder_Name_Table[i]
+      break
+      end
+    end
+
+    for i = 1, #Encoder_Id_Table do
+      if tonumber(Controls.SelectEncAudInputId.String) == i then
+        Controls.EncAudInputName.String = Encoder_Name_Table[i]
+      break
+      end
+    end
+
+    for i = 1, #Encoder_Id_Table do
+      if tonumber(Controls.SelectEncSwitchId.String) == i or Controls.SelectEncSwitchId.String == "None"  then
+        if Controls.SelectEncSwitchId.String == "None" then
+          Controls.EncSwitchName.String = "None"
+        else
+          Controls.EncSwitchName.String = Encoder_Name_Table[i]
+        end
+      break
+      end 
+    end
+  end
+
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--SetDecoderNames
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function SetDecoderNames(raw)
+  local input = raw
+  local tab = {}
+  --local index = nil
+  --local decoder = nil
+
+-- [^,%s]+ matches any character sequence that is NOT a comma or whitespace
+  for results in string.gmatch(input, "[^,%s]+") do
+    table.insert(tab, results)
+  end
+
+  local index = tonumber(tab[1])
+  Decoder_Name_Table[index] = tab[2]
+
+  --print("Decoder_Name_Table: "..tostring(index).." "..Decoder_Name_Table[index])
+
+  if index == #Decoder_Id_Table then
+
+    for i = 1, #Decoder_Id_Table do
+      if tonumber(Controls.SelectDecSwitchId.String) == i then
+        Controls.DecSwitchName.String = Decoder_Name_Table[i]
+      break
+      end
+    end
+
+    for i = 1, #Decoder_Id_Table do
+      if tonumber(Controls.SelectDecCmdId.String) == i then
+        Controls.DecCmdName.String = Decoder_Name_Table[i]
+      break
+      end
+    end
+
+    for i = 1, #Decoder_Id_Table do
+      if tonumber(Controls.SelectDecRs232CmdId.String) == i then
+        Controls.DecRs232CmdName.String = Decoder_Name_Table[i]
+      break
+      end
+    end
+  end
+
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--SetDecoderStatus
+--             ID, v,a,s,r,u,c
+--<List decoder 1 1,1,0,0,0,0
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+function SetDecoderStatus(raw)
+  local input = raw
+  local tab = {}
+  --local index = nil
+  --local decoder = nil
+
+  -- print("List decoder: "..raw)
+
+
+-- [^,%s]+ matches any character sequence that is NOT a comma or whitespace
+  for results in string.gmatch(input, "[^,%s]+") do
+    table.insert(tab, results)
+  end
+
+  local index = tonumber(tab[1])
+
+  Decoder_Status_Table[index].TypeVid   = tab[2]
+  Decoder_Status_Table[index].TypeAud   = tab[3]
+  Decoder_Status_Table[index].TypeRS232 = tab[4]
+  Decoder_Status_Table[index].TypeIR    = tab[5]
+  Decoder_Status_Table[index].TypeUsb   = tab[6]
+  Decoder_Status_Table[index].TypeCec   = tab[7]
+  --print("Decoder_Status_Table: "..Decoder_Status_Table[index].TypeVid..", "..Decoder_Status_Table[index].TypeAud..", "
+ -- ..Decoder_Status_Table[index].TypeRS232..", "..Decoder_Status_Table[index].TypeIR..", "..Decoder_Status_Table[index].TypeUsb..", "..Decoder_Status_Table[index].TypeCec)
+
+  if Controls["SelectDecSwitchId"].String == tab[1] then
+    ShowRoute (index, "ShowDecRoute")
+  end
+
+  for i = 1, #SelectDecVidId do
+--print ("SelectDecVidId: "..Controls[SelectDecVidId[i].Dec].String) 
+    if Controls[SelectDecVidId[i].Dec].String ~= "None" and SelectDecVidId[i].Num == index then
+      ShowVidRoute (index, SelectDecVidId[i].Name, i)
+      break
+    end
+  end
+  for i = 1, #SelectDecAudId do
+    if Controls[SelectDecAudId[i].Dec].String ~= "None" and SelectDecAudId[i].Num == index then
+      ShowAudRoute (index, SelectDecAudId[i].Name, i)
+      break
+    end
+  end
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--GetRxData
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function GetRxData(RxData)
+  print("Received data: "..RxData)
+
+  if string.find(RxData, "ListEncoderNames", 1, true) then
+  --  print("ListEncoderNames: "..RxData)
+    SetEncoderNames(RxData:gsub("<ListEncoderNames ",""))
+  elseif string.find(RxData, "ListDecoderNames", 1, true) then
+    --print("ListDecoderNames: "..RxData)
+    SetDecoderNames(RxData:gsub("<ListDecoderNames ",""))
+  elseif string.find(RxData, "List decoder", 1, true) then
+    SetDecoderStatus(RxData:gsub("<List decoder ",""))
+  end
+
+end
+
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--GetDevNames
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function GetDevNames()
+  TxQue:Push("ListEncoderNames")
+  TxQue:Push("ListDecoderNames")
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--GetStatus
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function GetStatus()
+  for i = 1, #Decoder_Id_Table do
+    TxQue:Push("ListDecoder "..tostring(i))
+  end
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--GetStatus
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function GetStatusDelay(Time)
+  Timer.CallAfter(function()
+--          print("This message prints after 2.0 seconds.")
+    GetStatus()
+  end, Time)
+  
+--[[
+  local RxData = "<ListDecoderNames 1,LG-TV,169.254.0.111"
+  SetDecoderNames(RxData:gsub("<ListDecoderNames ", ""))
+
+  local RxData = ">List decoder 1 1,1,0,0,0,0"
+  SetDecoderStatus(RxData:gsub(">List decoder ", ""))
+  
+  local RxData = ">List decoder 2 1,1,0,0,0,1"
+  SetDecoderStatus(RxData:gsub(">List decoder ", ""))
+]]
+  
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--TcpClientInitHandle
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+function TcpClientInitHandle()
+  local Tcpip   = Properties["IP"].Value                     
+  local TcpPort = Properties["TcpPort"].Value
+
+  port = tonumber(TcpPort) or 4001
+
+  NET.TcpClient = TcpSocket.New()
+  NET.TcpClient.EventHandler = function(sock, evt, err) -- Requires an end
+    -- TCP
+    if evt == TcpSocket.Events.Connected then
+      print( "Socket Connected" )
+      Controls.NetControllerConnect.Value = 1       --
+      Controls.NetControllerStatus.Color = "green"  --
+      NET.Connected = 1;
+      NET.TcpClient:Write("tcp client connect success...")  --
+      TxQue:Clear()
+      GetDevNames()
+      GetStatusDelay("2.0")
+    -- TCP 
+    elseif evt == TcpSocket.Events.Reconnect then
+      NET.Connected = 0;
+      print( "socket reconnecting..." )
+    -- TCP 
+    elseif evt == TcpSocket.Events.Data then      
+      NET.Connected = 1;
+      message = NET.TcpClient:ReadLine(TcpSocket.EOL.Any)
+      while (message ~= nil) do
+        message = message:gsub("[\r\n]+$", "") 
+        --[[+: Looks for one or more consecutive newline/carriage return characters. 
+                $: Anchors the match strictly to the end of the string.]]
+        if message ~= nil then
+          GetRxData(message)
+          --print( "Info:"..message )
+        end
+        message = sock:ReadLine(TcpSocket.EOL.Any) --
+      end  
+    --TCP
+    elseif evt == TcpSocket.Events.Closed then
+      NET.Connected = 0;
+      print( "socket closed by remote" )
+    -- TCP
+    elseif evt == TcpSocket.Events.Error then
+      NET.Connected = 0;
+      print( "socket closed due to error", err )
+    --TCP
+    elseif evt == TcpSocket.Events.Timeout then
+      NET.Connected = 0;
+      print( "socket closed due to timeout" )
+    else
+      NET.Connected = 0;
+      print( "unknown socket event", evt ) --should never happen
+    end
+
+    if NET.Connected == 0 then
+        TxQue:Clear()
+    end
+  end
+  Controls["NetControllerConnect"].Value = NET.Connected
+  NET.TcpClient:Connect(Tcpip, port)
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--SerialInitHandle
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function SerialInitHandle()
+  --
+  local SerialName     = Properties["SerialName"].Value  
+  local SerialBaudRate = Properties["baudrate"].Value     
+  local SerilDataBit   = Properties["datalen"].Value     
+  local SerilParity    = Properties["paritybit"].Value    
+
+  SerialBaudRate = tonumber(SerialBaudRate) or 9600
+  SerilDataBit   = tonumber(SerilDataBit) or 8
+
+  -- .SerialPorts
+  serialName = SerialPorts[SerialName]
+  if serialName == nil then
+    print("The system cannot find the Serial Port.")
+    return
+  end
+  -- 
+  serialName.EventHandler = function( port, msg) -- Requires an end
+
+    if msg == SerialPorts.Events.Data then
+      local line = port:ReadLine(SerialPorts.EOL.Any) -- Detects \r or \n
+      while line ~= nil do
+        --print( "read line", line)
+        --line = port:ReadLine(SerialPorts.EOL.Any)
+        if line ~= nil then 
+          GetRxData(line)
+        end
+        line = port:ReadLine(SerialPorts.EOL.Any)
+      end
+    end
+  end
+  
+  local sendControl = Controls.Inputs["serialNume"]
+  if not sendControl then
+    print("The system cannot find the Send Serial.")
+  else        
+    Controls.Inputs["serialNume"].EventHandler = function() -- Requires an end
+      if not serialNume.IsOpen then
+        serialNume:Open(SerialBaudRate, SerilDataBit, SerilParity)
+        TxQue:Clear()
+        GetDevNames()
+        GetStatusDelay("2.0")
+      end
+    end
+  end
+end
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--ControllerNetworkConnectEvent
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function ControllerNetworkConnectEvent(ctrl, Cmd, ComponentsName, EncodreId, CmdId)
+  local isOn = nil
+
+   --print("ControllerNetworkConnectEvent Cmd: "..Cmd)
+
+  isOn = ctrl.Value
+  if Cmd == "Connect" then
+    print("NetControllerConnect:"..isOn)
+
+    local CommMode = Properties["Connection"].Value
+    if CommMode ~= "TCP" then
+      print("Not in TCP mode, cannot connect.")
+      return
+    end
+
+    if isOn == 1 then
+      TcpClientInitHandle()     --TCP Client
+    elseif isOn == 0 then
+      if NET.TcpClient and NET.TcpClient.IsConnected then
+        NET.TcpClient:Disconnect()
+        print("Disconnecting TCP")
+        Controls.NetControllerStatus.Color = "red"
+        NET.Connected = 0;
+      end
+    end
+  elseif Cmd == "SendPresetCmd" then
+    local Index
+    for Index = 1, #Preset_Table do
+      if Controls[EncodreId].String == Preset_Table[Index] then
+        TxQue:Push("Recall "..tostring(Index))
+        GetStatusDelay("6.0")
+        break
+      end
+    end
+  elseif Cmd == "SendApiCmd" then
+--        print("SendApiCmd "..Controls.SetApiCmd.String)
+    TxQue:Push(Controls.SetApiCmd.String)
+  elseif Cmd == "GetStatus" then
+    GetStatus()
+  end
+end
+
+EncoderAudAnalog = {}
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--EncoderControlEvent
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function EncoderControlEvent(ctrl, Cmd, ComponentsName, EncodreId, CmdId)
+
+--  local isPressed = nil
+  local EncId = nil
+  local Index
+
+    --print("EncoderControlEvent Cmd: "..Cmd.." ComponentsName: "..ComponentsName.." EncodreId: "..EncodreId)
+  --+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  --Audio Input Setting
+  --isPressed = ctrl.Value
+  if Cmd == "Audio" then
+--    print("EncodreId: "..EncodreId.." ComponentsNameComponentsName: "..ComponentsName)
+    Index = tonumber(Controls[EncodreId].String)
+    if ComponentsName == "SetEncAudInputHdmi" then
+--      print("SetEncAudInputHdmi isPressed")
+      Controls["SetAudInputAnalog"].Value  = 0
+      Controls["SetEncAudInputHdmi"].Value = 1
+      EncoderAudAnalog[Index] = 0
+    elseif ComponentsName == "SetAudInputAnalog" then
+--      print("SetAudI-nputAnalog isPressed")
+      Controls["SetAudInputAnalog"].Value  = 1
+      Controls["SetEncAudInputHdmi"].Value = 0
+      EncoderAudAnalog[Index] = 1
+    end
+      TxQue:Push("EmbAudE "..Controls[EncodreId].String.." "..EncoderAudAnalog[Index])
+  elseif Cmd == "Cmds" then
+    for Index = 1, #Encoder_Id_Table do
+      if Controls[EncodreId].String == Encoder_Id_Table[Index] then
+        EncId = tostring(Index)
+        break
+      end
+    end
+    for Index = 1, #Encoder_Cec_Table do
+      if Controls[CmdId].String == Encoder_Cec_Table[Index].Name then
+        TxQue:Push("CECE "..EncId.." "..Encoder_Cec_Table[Index].Cmd)
+        break
+      end
+    end
+  elseif Cmd == "RS232" then
+    local RS232Cfg = "RS232Cfg"  
+    for Index = 1, #Encoder_Id_Table do
+      if Controls[EncodreId].String == Encoder_Id_Table[Index] then
+        EncId = tostring(Index)
+        TxQue:Push("RS232E "..EncId.." "..Controls.SetEncRs232Cfg.String.." "..Controls[CmdId].String)
+        break
+      end
+    end                       --  EncoderControlEvent(ctrl, Cmd,     ComponentsName,       EncodreId,       CmdId)
+  elseif Cmd == "Name" then  -- EncoderControlEvent(ctrl, "Name", "SelectEncCecCmdId",   "EncCecCmdName",   nil) 
+    --print("EncoderControlEvent Name: "..Controls[ComponentsName].String)
+    Index = tonumber(Controls[ComponentsName].String)
+    if Index > 0 then 
+      Controls[EncodreId].String = Encoder_Name_Table[Index]
+    end
+--    print("EncodreId: "..EncodreId.." Index: "..tostring(Index))
+    if EncodreId == "EncAudInputName" then
+      if (EncoderAudAnalog[Index] == 1) then
+        Controls["SetAudInputAnalog"].Value  = 1
+        Controls["SetEncAudInputHdmi"].Value = 0
+      else
+        Controls["SetAudInputAnalog"].Value  = 0
+        Controls["SetEncAudInputHdmi"].Value = 1
+      end
+    end 
+  end
+end --
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--DecoderControlEvent
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+function DecoderControlEvent(ctrl, Cmd, ComponentsName, EncoderId, DecoderId, CmdId)
+  local isPressed = 0
+  local EncId     = 0
+  local EncIdx    = 0
+  local DecId     = 0
+  local DecIdx    = 0
+  local Type      = 0
+  local Index     = 0
+  if Cmd == "Switch" then
+    for Index = 1, #Encoder_Sw_Id_Table do
+      if Controls[EncoderId].String == Encoder_Sw_Id_Table[Index] then
+        if Index == 1 then
+          EncId = "None"
+        else
+          EncId = tostring(Index-1)
+        end
+          EncIdx = Index-1
+        break
+      end
+    end
+
+    for Index = 1, #Decoder_Id_Table do
+      if Controls[DecoderId].String == Decoder_Id_Table[Index] then
+        DecId = tostring(Index)
+        DecIdx = Index
+        break
+      end
+    end
+    for Index = 1, #Decoder_Type_Table do
+      if Controls[CmdId].String == Decoder_Type_Table[Index].Name then
+        Type = Decoder_Type_Table[Index].Cmd
+        break
+      end
+    end
+
+    if Type == "all" then
+    --print ("Switch EncIndx: "..tostring(EncIdx).." DecIdx: "..tostring(DecIdx).." Type: "..Type) 
+      Decoder_Status_Table[DecIdx].TypeVid   = EncIdx
+      Decoder_Status_Table[DecIdx].TypeAud   = EncIdx
+      Decoder_Status_Table[DecIdx].TypeRS232 = EncIdx
+      Decoder_Status_Table[DecIdx].TypeIR    = EncIdx
+      Decoder_Status_Table[DecIdx].TypeUsb   = EncIdx
+      Decoder_Status_Table[DecIdx].TypeUsb   = EncIdx
+      Decoder_Status_Table[DecIdx].TypeCec   = EncIdx
+    elseif Type == "v" then
+      Decoder_Status_Table[DecIdx].TypeVid   = EncIdx
+    elseif Type == "a" then
+      Decoder_Status_Table[DecIdx].TypeAud   = EncIdx
+    elseif Type == "s" then
+      Decoder_Status_Table[DecIdx].TypeRS232 = EncIdx
+    elseif Type == "r" then
+      Decoder_Status_Table[DecIdx].TypeIR    = EncIdx
+    elseif Type == "u" then
+      Decoder_Status_Table[DecIdx].TypeUsb   = EncIdx
+    elseif Type == "c" then
+      Decoder_Status_Table[DecIdx].TypeCec   = EncIdx
+    end
+    if Type == "all" then
+      TxQue:Push("Switch "..EncId.." "..Type)
+    else
+      TxQue:Push("Switch "..EncId.." "..DecId.." "..Type)
+    end
+    ShowRoute (DecIdx, "ShowDecRoute")
+    if Type == "all" or Type == "v" then
+      for i = 1, #SelectDecVidId do
+    --print ("SelectDecVidId: "..Controls[SelectDecVidId[i].Dec].String) 
+        if Controls[SelectDecVidId[i].Dec].String ~= "None" and SelectDecVidId[i].Num == DecIdx then
+          ShowVidRoute (DecIdx, SelectDecVidId[i].Name, i)
+          break
+        end
+      end
+    end
+    if Type == "all" or Type == "a" then
+      for i = 1, #SelectDecAudId do
+        if Controls[SelectDecAudId[i].Dec].String ~= "None" and SelectDecAudId[i].Num == DecIdx then
+          ShowAudRoute (DecIdx, SelectDecAudId[i].Name, i)
+          break
+        end
+      end
+    end
+    --(ctrl, Cmd,   ComponentsName, EncoderId, DecoderId,           CmdId)
+    --(ctrl, "Cmds", "SendDecCmd",     nil,    "SelectDecCmdId", "SelectDecCmd"
+  elseif Cmd == "Cmds" then
+    if ComponentsName == "SendDecCmd" then
+      for Index = 1, #Decoder_Id_Table do
+        if Controls[DecoderId].String == Decoder_Id_Table[Index] then
+          DecId = tostring(Index)
+          break
+        end
+      end
+      for Index = 1, #Decoder_Cmd_Table do
+        --print("DecId "..DecId.." Cmd: "..Controls[DecoderId].String.." Table Name: "..Decoder_Cmd_Table[Index].Name)
+        if Controls[CmdId].String == Decoder_Cmd_Table[Index].Name then
+          if Decoder_Cmd_Table[Index].Value == "0" then
+            TxQue:Push(Decoder_Cmd_Table[Index].Cmd.." "..DecId)
+          else
+            TxQue:Push(Decoder_Cmd_Table[Index].Cmd.." "..DecId.." "..Decoder_Cmd_Table[Index].Value)
+          end
+          break
+        end
+      end
+    end
+    --(ctrl, Cmd,     ComponentsName, EncoderId, DecoderId,           CmdId)
+    --ctrl, "RS232", "SendDecRs232Cmd",  nil,  "SelectDecRs232CmdId", "SetDecRs232Cmd"
+  elseif Cmd == "RS232" then  
+    local RS232Cfg = "RS232Cfg"  
+    for Index = 1, #Decoder_Id_Table do
+      if Controls[DecoderId].String == Decoder_Id_Table[Index] then
+        DecId = tostring(Index)
+        TxQue:Push("RS232D "..DecId.." "..Controls.SetDecRs232Cfg.String.." "..Controls[CmdId].String)
+        break
+      end
+    end
+    --(ctrl, Cmd,     ComponentsName,      EncoderId, DecoderId,  CmdId)
+    --ctrl, "VidWall", "SendDecVidWallOn",  nil,       nil, "VidWallName")  end
+  elseif Cmd == "VidWall" then 
+    if ComponentsName == "SendDecVidWallOn" then
+      Controls.SendDecVidWallOn.Boolean  = true
+      Controls.SendDecVidWallOff.Boolean = false
+      TxQue:Push(">VideoWall <"..Controls[CmdId].String..">".." 1")
+    else
+      Controls.SendDecVidWallOn.Boolean  = false
+      Controls.SendDecVidWallOff.Boolean = true
+      TxQue:Push("VideoWall <"..Controls[CmdId].String..">".." 0")
+    end
+  elseif Cmd == "Name" then  
+    if Controls[ComponentsName].String == "None" then
+        Controls[EncoderId].String = "None"
+    else
+      Index = tonumber(Controls[ComponentsName].String)
+   --print("DecoderControlEvent Name: "..Controls[ComponentsName].String.." DecoderId "..DecoderId[Index])
+      Controls[EncoderId].String = DecoderId[Index]
+    end
+    --(ctrl, Cmd,     ComponentsName,      EncoderId,         DecoderId,           CmdId)
+    --ctrl, "Show", "SelectDecSwitchId",   "DecSwitchName",   Decoder_Name_Table, "ShowDecRoute"
+  elseif Cmd == "Show" then  
+    Index = tonumber(Controls[ComponentsName].String)
+    Controls[EncoderId].String = DecoderId[Index]
+    ShowRoute (Index, CmdId)
+
+    --(ctrl, Cmd,     ComponentsName,      EncoderId,                 DecoderId,       CmdId)
+    --ctrl, "ShowVid", "SelectDecVidId_"..i, "SelectDecVidName_"..i, Decoder_Name_Table, i)
+  elseif Cmd == "ShowVid" then  
+    Index = tonumber(Controls[ComponentsName].String)
+    SelectDecVidId[CmdId].Num = Index
+    ShowVidRoute (Index, EncoderId, CmdId)
+  elseif Cmd == "ShowAud" then  
+    Index = tonumber(Controls[ComponentsName].String)
+    SelectDecAudId[CmdId].Num = Index
+    ShowAudRoute (Index, EncoderId, CmdId)
+  end 
+
+end
+
+function FindInTable(t, targetValue)
+  for index, value in ipairs(t) do
+    if value == targetValue then
+        return index
+    end
+  end
+  return nil
+end
+
+------------------------------- Runtime Logic ---------------------------------
+
+if Controls then
+------------------------------------ Objects ----------------------------------
+
+
+-------------------------------- Initialization -------------------------------
+-- 
+  function initControls()
+    --[[
+    for name, control in pairs(Controls) do
+        print("Component: " .. name)
+    end
+    ]]
+    local CommMode = Properties["Connection"].Value
+    if CommMode == "TCP" then    
+      TcpClientInitHandle()
+    elseif CommMode == "RS232"  then
+      SerialInitHandle()
+    end
+    local Presetsize  = Properties["Preset_Size"].Value
+    Presetsize = tonumber(Presetsize) or 8
+    local Encodersize = Properties["Encoder_Size"].Value
+    local Decodersize = Properties["Decoder_Size"].Value
+    Encodersize = tonumber(Encodersize) or 4
+    local EncodersizeSw = Encodersize + 1
+    Decodersize = tonumber(Decodersize) or 8
+    local EnoderCecCmds = {}
+    local DecoderType = {}
+    local DecoderCmds = {}
+
+
+  --+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  --TxQueTimerEvent
+  --+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    TxQueTimer = Timer.New()
+
+    TxQueTimer.EventHandler = function()
+      -- Implementation for timer event
+
+      local sendData = TxQue:Pop()
+      if sendData ~= nil then
+        SendData_ToDevices(sendData)
+      else
+        TxQueTimer:Stop()
+      end
+    end
+
+
+    for i = 1, Presetsize do
+      Preset_Table[i] = tostring(i)
+    end
+
+    for i = 1, #Encoder_Cec_Table do
+      EnoderCecCmds[i] = Encoder_Cec_Table[i]["Name"]
+    end
+
+    for i = 1, EncodersizeSw do
+      if i == 1 then
+        Encoder_Sw_Id_Table[i] = "None"
+      else
+        Encoder_Sw_Id_Table[i] = tostring(i-1)
+      end 
+    end
+
+    for i = 1, Encodersize do
+      Encoder_Id_Table[i] = tostring(i)
+    end
+
+    for i = 1, Decodersize do
+      Decoder_Id_Table[i] = tostring(i)
+    end
+
+    for i = 1, #Decoder_Type_Table do
+      DecoderType[i] = Decoder_Type_Table[i]["Name"]
+    end
+
+    for i = 1, #Decoder_Cmd_Table do
+      DecoderCmds[i] = Decoder_Cmd_Table[i]["Name"]
+    end
+
+    for i = 1, Decodersize do
+      table.insert(Decoder_Status_Table, {TypeVid = 0, TypeAud = 0, TypeRS232 = 0, TypeIR = 0, TypeUsb = 0, TypeCec = 0})
+    end
+
+    for i = 1, Encodersize do
+      Encoder_Name_Table[i] = "Encoder "..tostring(i)
+    end
+
+    for i = 1, Decodersize do
+      Decoder_Name_Table[i] = "Decoder "..tostring(i)
+    end
+
+    for i = 1, Encodersize do
+      EncoderAudAnalog[i] = 0
+    end
+
+    if #Controls.SetEncRs232Cfg.String == 0 then
+      Controls.SetEncRs232Cfg.String = "9600-8n1"
+    end
+    
+    if #Controls.SetDecRs232Cfg.String == 0 then
+      Controls.SetDecRs232Cfg.String = "9600-8n1"
+    end
+    
+    if #Controls.VidWallName.String == 0 then
+      Controls.VidWallName.String = "Video Wall 1"
+    end
+
+    Controls.NetControllerConnect.Value = 0 
+
+    if Controls.SendDecVidWallOn.Boolean == false and Controls.SendDecVidWallOff.Boolean == false then
+      Controls.SendDecVidWallOn.Boolean  = true
+      Controls.SendDecVidWallOff.Boolean = false
+    end
+
+    Controls["SelectPresetId"].Choices = Preset_Table
+    Controls["SelectPresetId"].String  = Preset_Table[1]
+
+  --Encoder
+    Controls["SelectEncCecCmdId"].Choices = Encoder_Id_Table
+    Controls["SelectEncCecCmdId"].String  = Encoder_Id_Table[1]
+
+    Controls["SelectEncCecCmd"].Choices = EnoderCecCmds
+    Controls["SelectEncCecCmd"].String  = EnoderCecCmds[1]
+
+    Controls["SelectEncRs232Id"].Choices = Encoder_Id_Table
+    Controls["SelectEncRs232Id"].String  = Encoder_Id_Table[1]
+
+    Controls["SelectEncAudInputId"].Choices = Encoder_Id_Table
+    Controls["SelectEncAudInputId"].String  = Encoder_Id_Table[1]
+
+    --Decoder    
+    Controls["SelectEncSwitchId"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectEncSwitchId"].String  = Encoder_Sw_Id_Table[1]
+
+    Controls["SelectDecSwitchId"].Choices = Decoder_Id_Table
+    Controls["SelectDecSwitchId"].String  = Decoder_Id_Table[1]
+
+    Controls["SelectSwitchType"].Choices = DecoderType
+    Controls["SelectSwitchType"].String  = DecoderType[1]
+
+    Controls["SelectDecCmdId"].Choices = Decoder_Id_Table
+    Controls["SelectDecCmdId"].String  = Decoder_Id_Table[1]
+
+    Controls["SelectDecCmd"].Choices = DecoderCmds
+    Controls["SelectDecCmd"].String  = DecoderCmds[1]
+
+    Controls["SelectDecRs232CmdId"].Choices = Decoder_Id_Table
+    Controls["SelectDecRs232CmdId"].String  = Decoder_Id_Table[1]
+
+    Controls["SelectDecVidId_1"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecVidId_1"].String  = Encoder_Sw_Id_Table[1]
+    Controls["SelectDecVidId_2"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecVidId_2"].String  = Encoder_Sw_Id_Table[1]
+    Controls["SelectDecVidId_3"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecVidId_3"].String  = Encoder_Sw_Id_Table[1]
+    Controls["SelectDecVidId_4"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecVidId_4"].String  = Encoder_Sw_Id_Table[1]
+    Controls["SelectDecVidId_5"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecVidId_5"].String  = Encoder_Sw_Id_Table[1]
+    Controls["SelectDecVidId_6"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecVidId_6"].String  = Encoder_Sw_Id_Table[1]
+    Controls["SelectDecVidId_7"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecVidId_7"].String  = Encoder_Sw_Id_Table[1]
+    Controls["SelectDecVidId_8"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecVidId_8"].String  = Encoder_Sw_Id_Table[1]
+    Controls["SelectDecAudId_1"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecAudId_1"].String  = Encoder_Sw_Id_Table[1]
+    Controls["SelectDecAudId_2"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecAudId_2"].String  = Encoder_Sw_Id_Table[1]
+    Controls["SelectDecAudId_3"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecAudId_3"].String  = Encoder_Sw_Id_Table[1]
+    Controls["SelectDecAudId_4"].Choices = Encoder_Sw_Id_Table
+    Controls["SelectDecAudId_4"].String  = Encoder_Sw_Id_Table[1]
+
+    for i = 1, Decodersize do
+      table.insert(SelectDecVidId, {Dec = "SelectDecVidId_"..tostring(i), Name = "SelectDecVidName_"..tostring(i), Num = i})
+    end
+
+    for i = 1, 4 do
+      table.insert(SelectDecAudId, {Dec = "SelectDecAudId_"..tostring(i), Name = "SelectDecAudName_"..tostring(i), Num = i})
+    end
+
+    --SelectDecAudId_1
+  --SelectDecAudName_1
+
+
+    --Controls.NetControllerConnect.EventHandler = ControllerNetworkConnectEvent
+
+  --  Controls.TxQueTimer.EventHandler           = function() TxQueTimerEvent() end
+
+    Controls.NetControllerConnect.EventHandler = function(ctrl) ControllerNetworkConnectEvent(ctrl, "Connect", nil, nil, nil) end
+    Controls.SendPresetCmd.EventHandler        = function(ctrl) ControllerNetworkConnectEvent(ctrl, "SendPresetCmd", nil, "SelectPresetId", nil) end
+    Controls.SendApiCmd.EventHandler           = function(ctrl) ControllerNetworkConnectEvent(ctrl, "SendApiCmd", nil, nil, nil) end
+    Controls.GetStatus.EventHandler            = function(ctrl) ControllerNetworkConnectEvent(ctrl, "GetStatus", nil, nil, nil) end
+
+    Controls.SendEncCecCmd.EventHandler        = function(ctrl) EncoderControlEvent(ctrl, "Cmds",  "SendEncCecCmd",   "SelectEncCecCmdId", "SelectEncCecCmd")  end
+    Controls.SendEncRs232Cmd.EventHandler      = function(ctrl) EncoderControlEvent(ctrl, "RS232", "SendEncRs232Cmd", "SelectEncRs232Id", "SetEncRs232Cmd")  end
+    Controls.SetEncAudInputHdmi.EventHandler   = function(ctrl) EncoderControlEvent(ctrl, "Audio", "SetEncAudInputHdmi", "SelectEncAudInputId", nil) end
+    Controls.SetAudInputAnalog.EventHandler    = function(ctrl) EncoderControlEvent(ctrl, "Audio", "SetAudInputAnalog",  "SelectEncAudInputId",  nil) end
+    
+    Controls.SendSwitch.EventHandler           = function(ctrl) DecoderControlEvent(ctrl, "Switch",  "SendSwitch",       "SelectEncSwitchId",   "SelectDecSwitchId",   "SelectSwitchType")  end
+    Controls.SendDecCmd.EventHandler           = function(ctrl) DecoderControlEvent(ctrl, "Cmds",    "SendDecCmd",       nil,                   "SelectDecCmdId",      "SelectDecCmd")  end
+    Controls.SendDecRs232Cmd.EventHandler      = function(ctrl) DecoderControlEvent(ctrl, "RS232",   "SendDecRs232Cmd",  nil,                   "SelectDecRs232CmdId", "SetDecRs232Cmd")  end
+
+    Controls.SendDecVidWallOn.EventHandler     = function(ctrl) DecoderControlEvent(ctrl, "VidWall", "SendDecVidWallOn",  nil, nil, "VidWallName")  end
+    Controls.SendDecVidWallOff.EventHandler    = function(ctrl) DecoderControlEvent(ctrl, "VidWall", "SendDecVidWallOff", nil, nil, "VidWallName")  end
+
+    Controls.SelectEncCecCmdId.EventHandler    = function(ctrl) EncoderControlEvent(ctrl, "Name", "SelectEncCecCmdId",   "EncCecCmdName",   nil) end
+    Controls.SelectEncRs232Id.EventHandler     = function(ctrl) EncoderControlEvent(ctrl, "Name", "SelectEncRs232Id",    "EncRs232CmdName", nil) end
+    Controls.SelectEncAudInputId.EventHandler  = function(ctrl) EncoderControlEvent(ctrl, "Name", "SelectEncAudInputId", "EncAudInputName", nil) end
+
+    Controls.SelectEncSwitchId.EventHandler    = function(ctrl) DecoderControlEvent(ctrl, "Name", "SelectEncSwitchId",   "EncSwitchName",   Encoder_Name_Table, nil)  end
+    Controls.SelectDecCmdId.EventHandler       = function(ctrl) DecoderControlEvent(ctrl, "Name", "SelectDecCmdId",      "DecCmdName",      Decoder_Name_Table, nil)  end
+    Controls.SelectDecRs232CmdId.EventHandler  = function(ctrl) DecoderControlEvent(ctrl, "Name", "SelectDecRs232CmdId", "DecRs232CmdName", Decoder_Name_Table, nil)  end
+
+    Controls.SelectDecSwitchId.EventHandler    = function(ctrl) DecoderControlEvent(ctrl, "Show", "SelectDecSwitchId",   "DecSwitchName",   Decoder_Name_Table, "ShowDecRoute")  end
+  
+    for i = 1, 8 do
+      Controls["SelectDecVidId_"..i].EventHandler = function(ctrl) 
+        DecoderControlEvent(ctrl, "ShowVid", "SelectDecVidId_"..i, "SelectDecVidName_"..i, Decoder_Name_Table, i)
+      end
+    end
+    Controls.SelectDecAudId_1.EventHandler    = function(ctrl) DecoderControlEvent(ctrl, "ShowAud", "SelectDecAudId_1", "SelectDecAudName_1", Decoder_Name_Table, 1)  end
+    Controls.SelectDecAudId_2.EventHandler    = function(ctrl) DecoderControlEvent(ctrl, "ShowAud", "SelectDecAudId_2", "SelectDecAudName_2", Decoder_Name_Table, 2)  end
+    Controls.SelectDecAudId_3.EventHandler    = function(ctrl) DecoderControlEvent(ctrl, "ShowAud", "SelectDecAudId_3", "SelectDecAudName_3", Decoder_Name_Table, 3)  end
+    Controls.SelectDecAudId_4.EventHandler    = function(ctrl) DecoderControlEvent(ctrl, "ShowAud", "SelectDecAudId_4", "SelectDecAudName_4", Decoder_Name_Table, 4)  end
+   
+    local PinName = nil
+
+    PinName = "SendApi"
+    Controls[PinName].EventHandler = function(ctrl)
+      Controls.SetApiCmd.String = ctrl.String
+      ControllerNetworkConnectEvent(ctrl, "SendApiCmd", nil, nil, nil)
+    end
+
+    for i = 1, Presetsize do
+      PinName = "Preset_"..i
+      -- Access the input pin by the exact name defined in GetPins
+      if Controls[PinName] ~= nil then
+        Controls[PinName].EventHandler = function(ctrl)
+          Controls["SelectPresetId"].String = tostring(i)
+          ControllerNetworkConnectEvent(ctrl, "SendPresetCmd", nil, "SelectPresetId", nil)
+        end
+      end
+    end
+      
+    for i = 1, Decodersize do
+      PinName = "DecoderVid_"..i
+      -- Access the input pin by the exact name defined in GetPins
+      if Controls[PinName] ~= nil then
+        Controls[PinName].EventHandler = function(ctrl)
+          if ctrl.String == "0" or ctrl.String == "None" then
+            Controls["SelectEncSwitchId"].String = "None"
+            Controls["EncSwitchName"].String     = "None"
+          else
+            if not tonumber(ctrl.String) or tonumber(ctrl.String) > Encodersize then
+              print ("Invalid encoder ID: "..ctrl.String)
+              return
+            end 
+            Controls["SelectEncSwitchId"].String = ctrl.String
+            Controls["EncSwitchName"].String     = Encoder_Name_Table[tonumber(ctrl.String)]
+          end
+          Controls["SelectDecSwitchId"].String = tostring(i)
+          Controls["SelectSwitchType"].String  = Decoder_Type_Table[DEC_TYPE_VID].Name
+          Controls["DecSwitchName"].String     = Decoder_Name_Table[i]
+          DecoderControlEvent(ctrl, "Switch", "SendSwitch", "SelectEncSwitchId", "SelectDecSwitchId", "SelectSwitchType")
+        end
+      end
+    end
+
+    for i = 1, Decodersize do
+      PinName = "DecoderAud_"..i
+      -- Access the input pin by the exact name defined in GetPins
+      if Controls[PinName] ~= nil then
+        Controls[PinName].EventHandler = function(ctrl)
+          if ctrl.String == "0" or ctrl.String == "None" then
+            Controls["SelectEncSwitchId"].String = "None"
+            Controls["EncSwitchName"].String     = "None"
+          else
+            if not tonumber(ctrl.String) or tonumber(ctrl.String) > Encodersize then
+              print ("Invalid encoder ID: "..ctrl.String)
+              return
+            end
+            Controls["SelectEncSwitchId"].String = ctrl.String
+            Controls["EncSwitchName"].String     = Encoder_Name_Table[i]
+          end
+          Controls["SelectEncSwitchId"].String = ctrl.String
+          Controls["SelectDecSwitchId"].String = tostring(i)
+          Controls["SelectSwitchType"].String  = Decoder_Type_Table[DEC_TYPE_AUD].Name
+          Controls["DecSwitchName"].String     = Decoder_Name_Table[i]
+          DecoderControlEvent(ctrl, "Switch", "SendSwitch", "SelectEncSwitchId", "SelectDecSwitchId", "SelectSwitchType")
+        end
+      end
+    end
+
+    for i = 1, Decodersize do
+      PinName = "DecoderCmd_"..i
+      -- Access the input pin by the exact name defined in GetPins
+      if Controls[PinName] ~= nil then
+        Controls[PinName].EventHandler = function(ctrl)
+          if FindInTable(Controls["SelectDecCmd"].Choices, ctrl.String) then
+            Controls["SelectDecCmd"].String   = ctrl.String
+            Controls["SelectDecCmdId"].String = tostring(i)
+            Controls["DecCmdName"].String    = Decoder_Name_Table[i]
+            DecoderControlEvent(ctrl, "Cmds", "SendDecCmd", nil, "SelectDecCmdId", "SelectDecCmd")
+          else
+            print("Choice not found: "..ctrl.String)
+          end
+        end
+      end
+    end
+
+    for i = 1, Encodersize do
+      PinName = "EncoderCecCmd_"..i
+      -- Access the input pin by the exact name defined in GetPins
+      if Controls[PinName] ~= nil then
+        Controls[PinName].EventHandler = function(ctrl)
+          if FindInTable(Controls["SelectEncCecCmd"].Choices, ctrl.String) then
+            Controls["SelectEncCecCmd"].String = ctrl.String
+            Controls["SelectEncCecCmdId"].String = tostring(i)
+            Controls["EncCecCmdName"].String     = Encoder_Name_Table[i]
+            EncoderControlEvent(ctrl, "Cmds", "SendEncCecCmd", "SelectEncCecCmdId", "SelectEncCecCmd")
+          else
+            print("Choice not found: "..ctrl.String)
+          end
+        end
+      end
+    end
+
+
+  end --initControls()
+
+  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  ---------
+  --Q-SYS
+  ---------
+  --https://help.qsys.com/DeveloperHelp/#Code_Examples/TCPSocket_Example.htm
+-- https://help.qsys.com/Content/Control_Scripting/Using_Lua_in_Q-Sys/Timer.htm
+
+--[[
+Control Properties
+
+    .Value: Gets or sets the raw numeric value of the control.
+    .Position: Gets or sets the normalized position (typically 0.0 to 1.0) of a fader, knob, or button.
+    .Boolean: Gets or sets the true/false state of toggle and trigger buttons.
+    .String: Returns the text representation of the control state.
+    .Index: Returns the numeric index of the control within an array or table.
+]]
+
+  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  
+  local canInitialize = true
+
+  -- Check Properties and other stuff for illegal values
+
+  if canInitialize then
+    print("Initializing")
+    initControls()
+    print("Initialization Complete")
+  else
+    print("Not initializing")
+  end
+  -- Nothing should be done after this point
+
+end	--if Controls 

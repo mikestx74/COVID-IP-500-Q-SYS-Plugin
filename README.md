@@ -1,1 +1,1 @@
-See the COVID IP-500 Q-SYS Plugin.pdf
+See the COVID IP-200 Q-SYS Plugin.pdf
